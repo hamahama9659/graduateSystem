@@ -1,0 +1,530 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hmis.mapper.GraduationTestMapper">
+
+   <!-- 관리자 :: 졸업심사 관리(GRADUATIONTEST) - 수정 -->
+   <update id="adUpdate">
+      UPDATE TBL_GRADUATION_TEST
+      SET
+      TEST_STATE = #{testState},
+      REASON = #{reason}
+      WHERE
+      TEST_NO = #{testNo}
+   </update>
+
+   <!-- 관리자 :: 졸업심사 관리(GRADUATIONTEST) - 모든 학생 신청 목록 (전체) -->
+   <select id="adGraduTestListSearch"
+      resultType="com.hmis.domain.GraduationTestVO">
+<![CDATA[  
+
+   SELECT ROWNUM RNUM
+   , TEST_NO
+   , GRADU_NO
+   , USER_NO
+   , USER_NAME
+   , TEST_STATE
+   , APPLY_DATE
+   , TITLE
+   FROM (
+  SELECT T.TEST_NO
+        , T.GRADU_NO
+        , T.USER_NO
+        , U.USER_NAME
+        , T.TEST_STATE
+        , T.APPLY_DATE
+        , G.TITLE
+  FROM TBL_USER U
+     , TBL_GRADUATION G 
+     , TBL_GRADUATION_TEST T
+ WHERE U.USER_NO = T.USER_NO
+   AND T.GRADU_NO = G.GRADU_NO
+   AND T.GRADU_NO = #{graduNo}
+   AND T.TEST_NO > 0
+
+     ) WHERE  TEST_NO >= 0 
+ORDER BY TEST_NO DESC, APPLY_DATE DESC
+]]>
+
+   </select>
+
+
+
+   <!-- 3. 관리자 :: 졸업심사 관리(GRADUATIONTEST) - 모든 학생 신청 목록 (전체) 페이징 , 카운트 -->
+   <select id="adGraduTestListSearchCount" resultType="int">
+<![CDATA[ 
+SELECT COUNT(*) AS CNT
+  FROM(
+SELECT * FROM(
+  SELECT ROWNUM RNUM
+       , TEST_NO
+       , GRADU_NO
+       , USER_NO
+       , USER_NAME
+       , TEST_STATE
+       , APPLY_DATE
+   FROM (
+  SELECT T.TEST_NO
+       , T.GRADU_NO
+       , T.USER_NO
+       , U.USER_NAME
+       , T.TEST_STATE
+       , T.APPLY_DATE
+  FROM TBL_GRADUATION_TEST T
+     , TBL_GRADUATION G
+     , TBL_USER U
+ WHERE T.GRADU_NO = G.GRADU_NO
+   AND U.USER_NO = T.USER_NO
+   AND T.TEST_NO > 0
+   ]]>
+      <include refid="adGraduTestListSearch"></include>
+      )))
+   </select>
+
+   <sql id="adGraduTestListSearch">
+      <if test="searchType != null">
+         <if test="searchType == 'no'.toString()">
+            AND U.USER_NO like '%' || #{keyword} || '%'
+         </if>
+         <if test="searchType == 'name'.toString()">
+            AND U.USER_NAME like '%' || #{keyword} || '%'
+         </if>
+         <if test="searchType == 'nn'.toString()">
+            AND ( U.USER_NO like '%' || #{keyword} || '%' OR
+            U.USER_NAME like #{keyword} || '%')
+         </if>
+      </if>
+   </sql>
+
+
+   <!-- 관리자 :: 졸업심사 관리(GRADUATIONTEST) - 승인대기 학생 신청 목록 (승인대기) -->
+   <select id="adWaitList"
+      resultType="com.hmis.domain.GraduationTestVO">
+      SELECT T.TEST_NO
+      , T. GRADU_NO
+      , T.USER_NO
+      , U.USER_NAME
+      , T.TEST_STATE
+      , T.APPLY_DATE
+      FROM
+      TBL_GRADUATION_TEST T
+      , TBL_GRADUATION G
+      , TBL_USER U
+      WHERE T.USER_NO = U.USER_NO
+      AND
+      G.GRADU_NO = T.GRADU_NO
+      AND
+      T.TEST_STATE = '승인대기'
+      ORDER BY T.TEST_NO DESC
+   </select>
+
+
+   <!-- 관리자 :: 졸업심사 관리(GRADUATIONTEST) - 졸업심사 신청 학생 상세보기 -->
+   <select id="adGraduTestSelect"
+      resultType="com.hmis.domain.GraduationTestVO">
+      SELECT T.TEST_NO
+      ,T.GRADU_NO
+      , U.USER_NO
+      , U.USER_NAME
+      , U.GRADE
+      , U.STATE
+      , T.TEST_STATE
+      FROM TBL_GRADUATION_TEST T
+      , TBL_GRADUATION G
+      , TBL_USER U
+      WHERE
+      T.GRADU_NO = G.GRADU_NO
+      AND
+      T.USER_NO = U.USER_NO
+      AND
+      T.TEST_NO=#{testNo}
+   </select>
+
+   <!-- 관리자 :: 졸업심사 관리(GRADUATIONTEST) - 졸업심사 승인 (승인) -->
+   <update id="accept">
+      UPDATE TBL_GRADUATION_TEST
+      SET TEST_STATE = '승인'
+      , REASON = '승인'
+      WHERE TEST_NO = #{testNo}
+   </update>
+
+
+   <!--  관리자 , 학생 :: 졸업인증평가 관리 또는 내 점수 - 해당하는 학생의 신청 승인된 학생 목록 -->
+   <select id="acceptList"
+      resultType="com.hmis.domain.GraduationTestVO">
+      SELECT T.USER_NO
+      ,U.USER_NAME
+      ,U.GRADE
+      ,T.TEST_STATE
+      FROM
+      TBL_USER U
+      ,TBL_GRADUATION_TEST T
+      WHERE
+      T.USER_NO = U.USER_NO
+      AND
+      T.TEST_STATE = '승인';
+   </select>
+
+
+   <!-- 관리자 :: 졸업심사 관리(GRADUATIONTEST) - 졸업심사 거절 (거절) -->
+   <update id="deny">
+      UPDATE TBL_GRADUATION_TEST
+      SET TEST_STATE = '거절'
+      , REASON = '거절'
+      WHERE TEST_NO = #{testNo}
+   </update>
+
+
+
+   <!--  관리자 :: 졸업심사 관리(GRADUATIONTEST) - 졸업점수 -->
+   <select id="esList" resultType="com.hmis.dto.TotalDTO">
+<![CDATA[  
+SELECT * FROM(
+
+SELECT ROWNUM RNUM, U.USER_NO
+    , U.USER_NAME
+    , A.SUBTOTAL
+    , A.MISTOTAL
+    , (SUBTOTAL+MISTOTAL) AS TOTAL
+  FROM(
+SELECT USER_NO
+    , SUM(SUBTOTAL) AS SUBTOTAL
+    , SUM(MISTOTAL) AS MISTOTAL
+  FROM(
+SELECT USER_NO
+    , 0 AS SUBTOTAL
+    , COUNT(MIS_ATT_NO)*3 AS MISTOTAL
+  FROM TBL_MIS_ATT
+GROUP BY USER_NO
+UNION
+SELECT USER_NO
+    , SUM(AC_SCORE) AS SUBTOTAL
+    , 0 AS MISTOTAL  
+FROM TBL_APPLY
+WHERE APPLY_STATE = '승인'
+GROUP BY USER_NO
+UNION
+SELECT USER_NO, 0 AS SUBTOTAL, 0 AS MISTOTAL 
+  FROM TBL_USER WHERE AUTHORITY != 1 GROUP BY USER_NO
+)
+GROUP BY USER_NO
+ORDER BY USER_NO ASC ) A
+      , TBL_USER U
+WHERE A.USER_NO = U.USER_NO
+]]>
+      <include refid="adGraduTestListSearch"></include>
+
+<![CDATA[ 
+) WHERE (RNUM >= #{pageStart} AND RNUM <= #{pageEnd}) 
+ORDER BY USER_NO ASC
+]]>
+   </select>
+
+
+
+   <select id="graduateToBeList" resultType="com.hmis.dto.TotalDTO">
+
+SELECT * FROM(
+
+SELECT ROWNUM RNUM, U.USER_NO, U.STATE, U.GRADE
+    , U.USER_NAME
+    , A.SUBTOTAL
+    , A.MISTOTAL
+    , (SUBTOTAL+MISTOTAL) AS TOTAL
+  FROM(
+SELECT USER_NO
+    , SUM(SUBTOTAL) AS SUBTOTAL
+    , SUM(MISTOTAL) AS MISTOTAL
+  FROM(
+SELECT USER_NO
+    , 0 AS SUBTOTAL
+    , COUNT(MIS_ATT_NO)*3 AS MISTOTAL
+  FROM TBL_MIS_ATT
+GROUP BY USER_NO
+UNION
+SELECT USER_NO
+    , SUM(AC_SCORE) AS SUBTOTAL
+    , 0 AS MISTOTAL  
+FROM TBL_APPLY
+WHERE APPLY_STATE = '승인'
+GROUP BY USER_NO
+UNION
+SELECT USER_NO, 0 AS SUBTOTAL, 0 AS MISTOTAL 
+  FROM TBL_USER WHERE AUTHORITY != 1 GROUP BY USER_NO
+)
+GROUP BY USER_NO
+ORDER BY USER_NO ASC ) A
+      , TBL_USER U
+WHERE A.USER_NO = U.USER_NO
+AND (SUBTOTAL+MISTOTAL) >= 1200 AND GRADE = 4 AND STATE = '재학')
+   </select>
+
+
+
+
+
+   <!-- 관리자 :: 졸업인증평가 관리 - 평가 목록 -->
+   <select id="esListConut" resultType="int">
+<![CDATA[  
+SELECT count(*) AS CNT
+  FROM(
+SELECT USER_NO
+    , SUM(SUBTOTAL) AS SUBTOTAL
+    , SUM(MISTOTAL) AS MISTOTAL
+  FROM(
+SELECT USER_NO
+    , 0 AS SUBTOTAL
+    , COUNT(MIS_ATT_NO)*3 AS MISTOTAL
+  FROM TBL_MIS_ATT
+GROUP BY USER_NO
+UNION
+SELECT USER_NO
+    , SUM(AC_SCORE) AS SUBTOTAL
+    , 0 AS MISTOTAL  
+FROM TBL_APPLY
+WHERE APPLY_STATE = '승인'
+GROUP BY USER_NO
+UNION
+SELECT USER_NO, 0 AS SUBTOTAL, 0 AS MISTOTAL 
+  FROM TBL_USER WHERE AUTHORITY != 1 GROUP BY USER_NO
+)
+GROUP BY USER_NO) A
+      , TBL_USER U
+WHERE A.USER_NO = U.USER_NO
+]]>
+      <include refid="adGraduTestListSearch"></include>
+   </select>
+
+
+   <!--  관리자:: 신청학생 상세페이지-->
+     <select id="esSelect" resultType="com.hmis.dto.TotalDTO">
+      SELECT U.USER_NO, U.USER_NAME,U.GRADE, U.STATE
+        , A.SUBTOTAL, A.MISTOTAL
+      , (SUBTOTAL+MISTOTAL) AS TOTAL
+      FROM(
+      SELECT USER_NO
+      , SUM(SUBTOTAL) AS SUBTOTAL
+      , SUM(MISTOTAL) AS
+      MISTOTAL
+      FROM(
+      SELECT USER_NO
+      , 0 AS SUBTOTAL
+      , COUNT(MIS_ATT_NO)*3 AS
+      MISTOTAL
+      FROM TBL_MIS_ATT
+      GROUP BY USER_NO
+      UNION
+      SELECT USER_NO
+      ,
+      SUM(AC_SCORE) AS SUBTOTAL
+      , 0 AS MISTOTAL
+      FROM TBL_APPLY
+        WHERE APPLY_STATE = '승인'
+      GROUP BY USER_NO
+      UNION
+      SELECT USER_NO, 0 AS SUBTOTAL, 0 AS MISTOTAL
+      FROM TBL_USER WHERE
+      AUTHORITY != 1 GROUP BY USER_NO
+      )
+      WHERE USER_NO = #{userNo}
+      GROUP BY
+      USER_NO) A
+      , TBL_USER U
+      WHERE A.USER_NO = U.USER_NO
+   </select>
+
+
+
+   <!-- 학생 :: 졸업심사신청(GRADUATIONTEST) - 등록(신청) -->
+
+   <insert id="create">
+
+     <selectKey keyProperty="testNo" resultType="int"
+         order="BEFORE">
+         SELECT SEQ_GRADUATION_TEST.NEXTVAL FROM DUAL
+      </selectKey>
+
+      INSERT INTO TBL_GRADUATION_TEST(TEST_NO
+      , USER_NO
+      , GRADU_NO
+      , APPLY_DATE)
+      VALUES
+      (SEQ_GRADUATION_TEST.NEXTVAL, #{userNo}, #{graduNo}, sysdate)
+   </insert>
+
+
+
+   <!-- 학생 :: 졸업심사신청(GRADUATIONTEST) - 삭제(신청 취소) -->
+   <delete id="delete">
+      DELETE
+      FROM
+      TBL_GRADUATION_TEST
+      WHERE
+      TEST_NO = #{testNo}
+   </delete>
+
+
+   <!-- 학생 :: 졸업심사신청(GRADUATION) - GRADUATION 목록 public List<GraduationVO> graduList() 
+      throws Exception; -->
+      
+   <sql id="search">
+      <if test="searchType != null">
+         <if test="searchType == 't'.toString()">WHERE LIST.USER_NO = #{keyword} </if>
+      </if>
+   </sql>
+      
+   <select id="graduList"
+      resultType="com.hmis.domain.GraduationTestVO">
+      
+      <![CDATA[
+        SELECT ROWNUM, GRADU_NO, TEST_NO, GRADU_STATE, APP_START, APP_END, TITLE, USER_NO FROM (
+ SELECT GRADU_NO, TEST_NO, GRADU_STATE, APP_START, APP_END, TITLE, USER_NO  FROM        
+(( SELECT 
+         G.GRADU_NO,
+         0 AS TEST_NO,
+         G.GRADU_STATE,
+         G.APP_START,
+         G.APP_END, 
+         G.TITLE,
+         0 AS USER_NO
+      FROM 
+         TBL_GRADUATION G
+         WHERE
+    G.GRADU_NO NOT IN(SELECT T.GRADU_NO FROM TBL_GRADUATION_TEST T where T.USER_NO = #{keyword})
+      AND   G.GRADU_NO >= 0)
+    UNION
+( SELECT
+        G.GRADU_NO,
+        T.TEST_NO,
+        T.TEST_STATE AS GRADU_STATE
+      , G.APP_START
+      , G.APP_END
+      , G.TITLE
+      , T.USER_NO
+      FROM
+      TBL_GRADUATION_TEST T
+      ,TBL_GRADUATION G
+      WHERE T.USER_NO = #{keyword}
+      AND T.GRADU_NO = G.GRADU_NO
+))
+      ]]>
+<include refid="search"></include>
+      <![CDATA[
+ORDER BY APP_START DESC
+)
+WHERE ROWNUM  >= #{pageStart} AND ROWNUM <= #{pageEnd}
+ ]]>
+   </select>
+
+   <select id="graduListSearchCount" resultType="int">
+<![CDATA[
+ SELECT count(*) FROM (
+ SELECT GRADU_NO, TEST_NO, GRADU_STATE, APP_START, APP_END, TITLE, USER_NO FROM        
+(( SELECT 
+         G.GRADU_NO,
+         0 AS TEST_NO,
+         G.GRADU_STATE,
+         G.APP_START,
+         G.APP_END, 
+         G.TITLE,
+         0 AS USER_NO
+      FROM 
+         TBL_GRADUATION G
+         WHERE
+    G.GRADU_NO NOT IN(SELECT T.GRADU_NO FROM TBL_GRADUATION_TEST T where T.USER_NO = #{keyword})
+      AND   G.GRADU_NO >= 0)
+    UNION
+( SELECT
+        G.GRADU_NO,
+        T.TEST_NO,
+        T.TEST_STATE AS GRADU_STATE
+      , G.APP_START
+      , G.APP_END
+      , G.TITLE
+      , T.USER_NO
+      FROM
+      TBL_GRADUATION_TEST T
+      ,TBL_GRADUATION G
+      WHERE T.USER_NO = #{keyword}
+      AND T.GRADU_NO = G.GRADU_NO
+))LIST
+]]>
+<include refid="search"></include>
+ORDER BY LIST.APP_START DESC
+)
+</select>
+
+   <!-- 학생 :: 졸업심사신청(GRADUATIONTEST) - 졸업 신청 상세조회 (팝업창 >>>> 목적 : 승인여부 확인) -->
+
+   <!-- 학생 :: 팝업 - 항목 전체 리스트 -->
+   <select id="subList" resultType="com.hmis.domain.SubjectVO">
+
+      SELECT SUB_NO
+      , SUB_NAME
+      , SCORE
+      ,
+      CATEG
+      , AREA
+      , PUBLICATION
+      , GUIDE
+      FROM TBL_SUBJECT
+      WHERE SUB_NAME='추가점수'
+   </select>
+
+   <!-- 학생 :: 팝업 - 항목 명 검색 -->
+   <select id="searchSub" resultType="com.hmis.domain.SubjectVO">
+      SELECT SUB_NO
+      , SUB_NAME
+      , SCORE
+      , CATEG
+      , AREA
+      , PUBLICATION
+      , GUIDE
+      FROM TBL_SUBJECT
+      WHERE UPPER(SUB_NAME)
+      LIKE UPPER('%'||REPLACE(''|| #{subName}|| '', ' ',
+      '')||'%')
+
+   </select>
+
+
+   <!-- 학생 :: 졸업심사 승인상태 확인하는 팝업창 -->
+   <select id="graduTestList"
+      resultType="com.hmis.domain.GraduationTestVO">
+      SELECT T.USER_NO, T.TEST_NO, G.TITLE,T.APPLY_DATE
+      , U.USER_NAME
+      , U.GRADE
+      , T.TEST_STATE
+      FROM
+      TBL_USER U
+      ,TBL_GRADUATION_TEST T
+      , TBL_GRADUATION G
+
+      WHERE U.USER_NO = T.USER_NO
+      AND G.GRADU_NO = T.GRADU_NO
+      and T.USER_NO =#{userNo}
+   	 
+   </select>
+
+
+
+
+
+
+
+   <!-- 학생 :: 팝업 - 항목 명 검색 -->
+   <select id="searchGT" resultType="com.hmis.domain.GraduationVO">
+
+      SELECT T.TEST_NO, U.USER_NO, T.GRADU_NO, T.TEST_STATE, T.APPLY_DATE,
+      T.REASON, U.USER_NAME, U.GRADE
+      FROM TBL_USER U, TBL_GRADUATION_TEST T
+      WHERE U.USER_NO = T.USER_NO
+      AND UPPER(USER_NAME)
+      LIKE UPPER('%'||REPLACE(''|| USER_NAME || '', ' ',
+      '')||'%');
+
+   </select>
+
+</mapper>

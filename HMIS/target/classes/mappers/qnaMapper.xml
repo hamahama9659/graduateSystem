@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hmis.mapper.QnaMapper">
+
+
+   <!-- 학생 ::  QnA - 등록 -->
+   <insert id="create">
+
+      INSERT INTO TBL_QnA
+      (QnA_NO, QnA_TITLE, QnA_CONTENTS,
+      REGDATE, USER_NO )
+      VALUES
+      (SEQ_QNA.nextval, #{qnaTitle}, #{qnaContents},
+      SYSDATE, #{userNo})
+   </insert>
+
+   <!-- 관리자 및 학생 ::  QnA - 조회 -->
+   <select id="read" resultType="com.hmis.domain.QnAVO">
+      SELECT
+      Q.QnA_NO,
+      Q.QnA_TITLE,
+      Q.QnA_CONTENTS,
+      Q.REGDATE,
+      Q.HITS,
+      Q.USER_NO,
+      U.USER_NAME
+      FROM
+      TBL_QnA Q, TBL_USER U
+      WHERE
+      Q.USER_NO = U.USER_NO
+      AND QnA_NO = #{qnaNo}
+   </select>
+
+   <!-- 학생 ::  QnA - 수정-->
+   <update id="update">
+      UPDATE
+      TBL_QnA
+      SET QnA_TITLE = #{qnaTitle},
+      QnA_CONTENTS = #{qnaContents}
+      WHERE
+      QNA_NO = #{qnaNo}
+   </update>
+
+   <!-- 관리자 및 학생 ::  QnA - 삭제-->
+   <delete id="delete">
+      DELETE
+      FROM
+      TBL_QnA
+      WHERE
+      QNA_NO = #{qnaNo}
+   </delete>
+
+   <!-- 페이징을 위한 (조건에 맞는 or 전체) 게시물 개수 카운트 -->
+   <select id="countPaging" resultType="int">
+      <![CDATA[
+          SELECT 
+             COUNT(qnaNo) 
+          FROM 
+             TBL_QnA
+         WHERE 
+            TBL_QnA >= 0  
+      ]]>
+   </select>
+   
+   <!-- 제목 검색 -->
+   <sql id="search">
+      <if test="searchType != null">
+         <if test="searchType == 'T'.toString()"> and QnA_TITLE like '%' || #{keyword} || '%' </if>
+         <if test="searchType == 'C'.toString()"> and QnA_CONTENTS like '%' || #{keyword} || '%'   </if>
+         <if test="searchType == 'N'.toString()"> and USER_NAME like '%' || #{keyword} || '%'   </if>
+
+      </if>
+   </sql>
+
+   <!-- 검색한 리스트 페이징 -->
+   <select id="listSearch" resultType="com.hmis.domain.QnAVO">
+      <![CDATA[  
+      SELECT * FROM(
+         SELECT ROWNUM RNUM
+         , QnA_NO
+         , QnA_TITLE
+         , QnA_CONTENTS
+         , HITS
+         , REGDATE
+         , USER_NAME
+         , USER_NO
+         FROM (
+            SELECT 
+              Q.QnA_NO
+            , Q.QnA_TITLE
+            , Q.QnA_CONTENTS
+            , Q.HITS
+            , Q.REGDATE
+            , U.USER_NAME
+            , U.USER_NO
+         FROM TBL_QNA Q, TBL_USER U
+         WHERE Q.USER_NO = U.USER_NO
+         AND  Q.QnA_NO > 0  
+      ]]>
+      <include refid="search" />
+      ORDER BY Q.QnA_NO DESC
+      <![CDATA[    
+            )) WHERE (RNUM >=#{pageStart} AND RNUM <= #{pageEnd}) 
+         ORDER BY QnA_NO DESC
+      
+      ]]>
+   </select>
+
+   <!-- QnA 검색할 때 전체 카운트 가져오기 -->
+   <select id="listSearchCount" resultType="int">
+      <![CDATA[  
+        SELECT 
+           COUNT(QnA_NO) 
+        FROM 
+           TBL_QNA
+        WHERE 
+           QnA_NO >= 0 
+      ]]>
+
+      <include refid="search" />
+   </select>
+
+<!-- 관리자 및 학생 ::  QnA - 조회수-->
+<update id="updateHits">
+
+        update tbl_QnA
+
+        set hits = hits + 1
+
+        where QNA_NO = #{qnaNo}
+
+
+ </update>
+
+</mapper>

@@ -1,0 +1,514 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hmis.mapper.ApplyMapper">
+
+	<!-- 학생 :: 팝업 - 항목 전체 리스트 -->
+	<select id="subList" resultType="com.hmis.domain.SubjectVO">
+
+		SELECT SUB_NO
+      , SUB_NAME
+      , SCORE
+      ,
+      CATEG
+      , AREA
+      , PUBLICATION
+      , GUIDE
+      FROM TBL_SUBJECT
+      WHERE NOT SUB_NAME='추가점수' 
+
+	</select>
+
+	<!-- 학생 :: 팝업 - 항목 명 검색 -->
+	<select id="searchSub" resultType="com.hmis.domain.SubjectVO">
+		SELECT SUB_NO
+		, SUB_NAME
+		, SCORE
+		, CATEG
+		, AREA
+		, PUBLICATION
+		, GUIDE
+		FROM TBL_SUBJECT
+		WHERE UPPER(SUB_NAME)
+		LIKE UPPER('%'||REPLACE(''|| #{subName}|| '', ' ',
+		'')||'%')
+
+	</select>
+
+
+	<!-- 학생:: 신청 등록 -->
+	<insert id="insert">
+
+		<selectKey keyProperty="applyNo" resultType="int"
+			order="BEFORE">
+			SELECT SEQ_APPLY.NEXTVAL FROM DUAL
+		</selectKey>
+
+		INSERT INTO TBL_APPLY(APPLY_NO
+		, USER_NO
+		, SUB_NO
+		, AC_SCORE
+		<if test="serialNum != null">, SERIAL_NUM</if>
+		<if test="acDate != null">, AC_DATE</if>
+		<if test="content != null">, CONTENT</if>
+		)
+		VALUES(#{applyNo}
+		, #{userNo}
+		, #{subNo}
+		, #{acScore}
+		<if test="serialNum != null">, #{serialNum}</if>
+		<if test="acDate != null">, #{acDate}</if>
+		<if test="content != null">, #{content}</if>
+		)
+
+	</insert>
+
+	<!-- 학생 :: 다중 파일 등록 -->
+	<insert id="insertFiles">
+
+		INSERT INTO TBL_FILE(FILE_NO
+		, FILE_NAME
+		, APPLY_NO)
+		VALUES(SEQ_FILE.NEXTVAL
+		, #{fileName}
+		, #{applyNo})
+
+	</insert>
+
+
+	<sql id="searchEs">
+		<if test="searchType != null">
+			<if test="searchType == 'no'.toString()">
+				AND U.USER_NO like '%' || #{keyword} || '%'
+			</if>
+			<if test="searchType == 'name'.toString()">
+				AND U.USER_NAME like '%' || #{keyword} || '%'
+			</if>
+			<if test="searchType == 'nn'.toString()">
+				AND ( U.USER_NO like '%' || #{keyword} || '%' OR
+				U.USER_NAME like #{keyword} || '%')
+			</if>
+		</if>
+	</sql>
+
+	<sql id="search">
+		<if test="searchType != null">
+			<if test="searchType == 't'.toString()">
+				and PRODUCT_NAME like '%' || #{keyword} || '%'
+			</if>
+			<if test="searchType == 'g'.toString()">
+				and GOOD_THING like '%' || #{keyword} || '%'
+			</if>
+			<if test="searchType == 'b'.toString()">
+				and BAD_THING like '%' || #{keyword} || '%'
+			</if>
+			<if test="searchType == 'gb'.toString()">
+				and ( GOOD_THING like '%' || #{keyword} || '%' OR
+				BAD_THING like
+				'%' ||
+				#{keyword} || '%')
+			</if>
+			<!-- <if test="searchType == 'cw'.toString()"> and ( content like '%' 
+				|| #{keyword} || '%' OR writer like '%' || #{keyword} || '%') </if> <if test="searchType 
+				== 'tcw'.toString()"> and ( title like '%' || #{keyword} || '%' OR content 
+				like '%' || #{keyword} || '%' OR writer like '%' || #{keyword} || '%') </if> -->
+		</if>
+	</sql>
+
+	<!-- 학생 :: 신청 내역 목록 -->
+	<select id="stuApplyList" resultType="com.hmis.domain.ApplyVO">
+		SELECT A.APPLY_NO
+		,
+		S.SUB_NAME
+		, A.APPLY_DATE
+		, A.APPLY_STATE
+		FROM TBL_APPLY A
+		, TBL_SUBJECT S
+		WHERE A.SUB_NO = S.SUB_NO
+		AND A.USER_NO = #{userNo}
+		ORDER BY A.APPLY_NO
+		DESC
+	</select>
+
+	<!-- 학생 :: 신청 내역 상세조회 -->
+	<select id="stuApplySelect"
+		resultType="com.hmis.domain.ApplyVO">
+		SELECT A.APPLY_NO
+		, A.APPLY_STATE
+		, S.CATEG
+		, S.AREA
+		, S.SUB_NAME
+		,
+		S.PUBLICATION
+		, A.AC_SCORE
+		, A.APPLY_DATE
+		, NVL(A.CONTENT, '-') AS
+		CONTENT
+		<!-- , NVL(TO_CHAR(A.AC_DATE), '-') AS AC_DATE -->
+		, A.AC_DATE
+		, NVL(A.SERIAL_NUM, '-') AS SERIAL_NUM
+		, A.REASON
+		FROM
+		TBL_APPLY A
+		, TBL_SUBJECT S
+		WHERE A.SUB_NO = S.SUB_NO
+		AND A.APPLY_NO =
+		#{applyNo}
+	</select>
+
+
+
+	<!-- 관리자 :: 전체 신청 내역 목록 -->
+	<select id="adApplyList" resultType="com.hmis.domain.ApplyVO">
+<![CDATA[  
+SELECT * FROM(
+  SELECT ROWNUM RNUM
+  	   , APPLY_NO
+       , USER_NO
+       , USER_NAME
+  	   , SUB_NAME
+  	   , APPLY_DATE
+  	   , APPLY_STATE
+   FROM (
+  SELECT A.APPLY_NO
+       , A.USER_NO
+       , U.USER_NAME
+  	   , S.SUB_NAME
+  	   , A.APPLY_DATE
+  	   , A.APPLY_STATE
+  FROM TBL_APPLY A
+     , TBL_SUBJECT S
+     , TBL_USER U
+ WHERE A.SUB_NO = S.SUB_NO
+   AND U.USER_NO = A.USER_NO
+   AND A.APPLY_NO > 0
+]]>
+		<include refid="adApplyListSearch"></include>
+
+		ORDER BY A.APPLY_NO DESC, A.APPLY_DATE DESC
+  
+<![CDATA[    
+ )) WHERE (RNUM >= #{pageStart} AND RNUM <= #{pageEnd}) 
+ORDER BY APPLY_NO DESC, APPLY_DATE DESC
+]]>
+
+	</select>
+
+	<!-- 관리자 :: 전체 신청 내역 목록 리스트 카운트 -->
+	<select id="adApplyListSearchCount" resultType="int">
+<![CDATA[ 
+SELECT COUNT(*) AS CNT
+  FROM(
+SELECT * FROM(
+  SELECT ROWNUM RNUM
+  	   , APPLY_NO
+       , USER_NO
+       , USER_NAME
+  	   , SUB_NAME
+  	   , APPLY_DATE
+  	   , APPLY_STATE
+   FROM (
+  SELECT A.APPLY_NO
+       , A.USER_NO
+       , U.USER_NAME
+  	   , S.SUB_NAME
+  	   , A.APPLY_DATE
+  	   , A.APPLY_STATE
+  FROM TBL_APPLY A
+     , TBL_SUBJECT S
+     , TBL_USER U
+ WHERE A.SUB_NO = S.SUB_NO
+   AND U.USER_NO = A.USER_NO
+   AND A.APPLY_NO > 0
+   ]]>
+		<include refid="adApplyListSearch"></include>
+		)))
+	</select>
+
+
+	<sql id="adApplyListSearch">
+		<if test="searchType != null">
+			<if test="searchType == 'no'.toString()">
+				AND U.USER_NO like '%' || #{keyword} || '%'
+			</if>
+			<if test="searchType == 'name'.toString()">
+				AND U.USER_NAME like '%' || #{keyword} || '%'
+			</if>
+			<if test="searchType == 'nn'.toString()">
+				AND ( U.USER_NO like '%' || #{keyword} || '%' OR
+				U.USER_NAME like #{keyword} || '%')
+			</if>
+		</if>
+	</sql>
+
+
+
+	<select id="waitList" resultType="com.hmis.domain.ApplyVO">
+		SELECT A.APPLY_NO
+		, A.USER_NO
+		,
+		U.USER_NAME
+		, S.SUB_NAME
+		, A.APPLY_DATE
+		, A.APPLY_STATE
+		FROM TBL_APPLY A
+		,
+		TBL_USER U
+		, TBL_SUBJECT S
+		WHERE A.USER_NO = U.USER_NO
+		AND A.SUB_NO =
+		S.SUB_NO
+		AND A.APPLY_STATE = '승인대기'
+		ORDER BY A.APPLY_NO DESC
+	</select>
+
+	<!-- 관리자 :: 졸업인증신청 관리 - 신청 상세조회 -->
+	<select id="adApplySelect" resultType="com.hmis.domain.ApplyVO">
+		SELECT A.APPLY_NO
+		,
+		U.USER_NO
+		, U.USER_NAME
+		, S.CATEG
+		, S.AREA
+		, S.SUB_NAME
+		, A.AC_SCORE
+		,
+		NVL(A.SERIAL_NUM, '-') AS SERIAL_NUM
+		, A.AC_DATE
+		, A.APPLY_STATE
+		,
+		A.APPLY_DATE
+		, NVL(A.CONTENT, '-') AS CONTENT
+		, A.REASON
+		FROM TBL_APPLY A
+		, TBL_SUBJECT S
+		, TBL_USER U
+		WHERE A.SUB_NO = S.SUB_NO
+		AND A.USER_NO =
+		U.USER_NO
+		AND A.APPLY_NO = #{applyNo}
+	</select>
+
+	<!-- 파일 목록 -->
+	<select id="fileList" resultType="com.hmis.domain.FileVO">
+		SELECT FILE_NO
+		,
+		SUBSTR(FILE_NAME, 50) AS FILE_NAME
+		, FILE_NAME AS FILE_LOCATION
+		,
+		APPLY_NO
+		FROM TBL_FILE
+		WHERE APPLY_NO = #{applyNo}
+	</select>
+
+	<!-- 관리자 :: 졸업인증신청 관리 - 신청 승인 -->
+	<update id="accept">
+		UPDATE TBL_APPLY
+		SET APPLY_STATE = '승인'
+		, REASON =
+		#{reason}
+		WHERE APPLY_NO = #{applyNo}
+	</update>
+
+	<!-- 관리자 :: 졸업인증신청 관리 - 신청 거절 -->
+	<update id="deny">
+		UPDATE TBL_APPLY
+		SET APPLY_STATE = '거절'
+		, REASON =
+		#{reason}
+		WHERE APPLY_NO = #{applyNo}
+	</update>
+
+	<!-- 관리자 :: 졸업인증평가 관리 - 평가 목록 -->
+	<select id="esList" resultType="com.hmis.dto.TotalDTO">
+<![CDATA[  
+SELECT * FROM(
+
+SELECT ROWNUM RNUM, U.USER_NO
+	 , U.USER_NAME
+	 , A.SUBTOTAL
+	 , A.MISTOTAL
+	 , (SUBTOTAL+MISTOTAL) AS TOTAL
+  FROM(
+SELECT USER_NO
+	 , SUM(SUBTOTAL) AS SUBTOTAL
+	 , SUM(MISTOTAL) AS MISTOTAL
+  FROM(
+SELECT USER_NO
+	 , 0 AS SUBTOTAL
+	 , COUNT(MIS_ATT_NO)*3 AS MISTOTAL
+  FROM TBL_MIS_ATT
+GROUP BY USER_NO
+UNION
+SELECT USER_NO
+	 , SUM(AC_SCORE) AS SUBTOTAL
+	 , 0 AS MISTOTAL  
+FROM TBL_APPLY
+WHERE APPLY_STATE = '승인'
+GROUP BY USER_NO
+UNION
+SELECT USER_NO, 0 AS SUBTOTAL, 0 AS MISTOTAL 
+  FROM TBL_USER WHERE AUTHORITY != 1 GROUP BY USER_NO
+)
+GROUP BY USER_NO
+ORDER BY USER_NO ASC ) A
+	   , TBL_USER U
+WHERE A.USER_NO = U.USER_NO
+]]>
+		<include refid="searchEs"></include>
+
+<![CDATA[ 
+) WHERE (RNUM >= #{pageStart} AND RNUM <= #{pageEnd}) 
+ORDER BY USER_NO ASC
+]]>
+	</select>
+
+	<!-- 관리자 :: 졸업인증평가 관리 - 평가 목록 -->
+	<select id="esListConut" resultType="int">
+<![CDATA[  
+SELECT count(*) AS CNT
+  FROM(
+SELECT USER_NO
+	 , SUM(SUBTOTAL) AS SUBTOTAL
+	 , SUM(MISTOTAL) AS MISTOTAL
+  FROM(
+SELECT USER_NO
+	 , 0 AS SUBTOTAL
+	 , COUNT(MIS_ATT_NO)*3 AS MISTOTAL
+  FROM TBL_MIS_ATT
+GROUP BY USER_NO
+UNION
+SELECT USER_NO
+	 , SUM(AC_SCORE) AS SUBTOTAL
+	 , 0 AS MISTOTAL  
+FROM TBL_APPLY
+WHERE APPLY_STATE = '승인'
+GROUP BY USER_NO
+UNION
+SELECT USER_NO, 0 AS SUBTOTAL, 0 AS MISTOTAL 
+  FROM TBL_USER WHERE AUTHORITY != 1 GROUP BY USER_NO
+)
+GROUP BY USER_NO) A
+	   , TBL_USER U
+WHERE A.USER_NO = U.USER_NO
+]]>
+		<include refid="searchEs"></include>
+	</select>
+
+
+	<select id="esSelect" resultType="com.hmis.dto.TotalDTO">
+		SELECT U.USER_NO
+		, U.USER_NAME
+		,
+		U.GRADE
+		, U.STATE
+		, A.SUBTOTAL
+		, A.MISTOTAL
+		, (SUBTOTAL+MISTOTAL) AS TOTAL
+		FROM(
+		SELECT USER_NO
+		, SUM(SUBTOTAL) AS SUBTOTAL
+		, SUM(MISTOTAL) AS
+		MISTOTAL
+		FROM(
+		SELECT USER_NO
+		, 0 AS SUBTOTAL
+		, COUNT(MIS_ATT_NO)*3 AS
+		MISTOTAL
+		FROM TBL_MIS_ATT
+		GROUP BY USER_NO
+		UNION
+		SELECT USER_NO
+		,
+		SUM(AC_SCORE) AS SUBTOTAL
+		, 0 AS MISTOTAL
+		FROM TBL_APPLY
+		WHERE APPLY_STATE = '승인'
+		GROUP BY USER_NO
+		UNION
+		SELECT USER_NO, 0 AS SUBTOTAL,
+		0 AS MISTOTAL
+		FROM TBL_USER WHERE
+		AUTHORITY != 1 GROUP BY USER_NO
+		)
+		WHERE
+		USER_NO = #{userNo}
+		GROUP BY
+		USER_NO) A
+		, TBL_USER U
+		WHERE A.USER_NO =
+		U.USER_NO
+	</select>
+
+	<!-- 관리자, 학생 :: 졸업인증평가 관리, 내 점수 - 해당하는 학생의 신청 승인된 신청 내역 리스트 가져오기 -->
+	<select id="acceptList" resultType="com.hmis.domain.ApplyVO">
+		SELECT S.CATEG
+		, S.AREA
+		,
+		S.SUB_NAME
+		, A.AC_DATE
+		, A.AC_SCORE
+		FROM TBL_SUBJECT S
+		, TBL_APPLY A
+		WHERE
+		S.SUB_NO = A.SUB_NO
+		AND A.USER_NO = #{userNo}
+		AND A.APPLY_STATE = '승인'
+	</select>
+
+
+	<!-- 관리자 :: 액셀 다운용 esList -->
+	<select id="excelEsList" resultType="com.hmis.dto.TotalDTO">
+		SELECT U.USER_NO
+		,
+		U.USER_NAME
+		, A.SUBTOTAL
+		, A.MISTOTAL
+		, (SUBTOTAL+MISTOTAL) AS TOTAL
+		FROM(
+		SELECT USER_NO, SUM(SUBTOTAL) AS SUBTOTAL, SUM(MISTOTAL) AS
+		MISTOTAL
+		FROM(
+		SELECT USER_NO, 0 AS SUBTOTAL, COUNT(MIS_ATT_NO)*3 AS
+		MISTOTAL
+		FROM TBL_MIS_ATT
+		GROUP BY USER_NO
+		UNION
+		SELECT USER_NO,
+		SUM(AC_SCORE) AS SUBTOTAL, 0 AS MISTOTAL
+		FROM TBL_APPLY
+		GROUP BY USER_NO
+		UNION
+		SELECT USER_NO, 0 AS SUBTOTAL, 0 AS MISTOTAL
+		FROM TBL_USER
+		WHERE
+		AUTHORITY != 1
+		GROUP BY USER_NO)
+		GROUP BY USER_NO) A, TBL_USER U
+		WHERE
+		A.USER_NO = U.USER_NO
+		ORDER BY U.USER_NO ASC
+	</select>
+
+	<!-- 졸업심사 신청자 추가점수 '승인' -->
+	<insert id="exInsert">
+
+		INSERT INTO TBL_APPLY(APPLY_NO
+		, USER_NO
+		, SUB_NO
+		,APPLY_STATE
+		, APPLY_DATE
+		,AC_SCORE
+		)
+		VALUES(SEQ_APPLY.NEXTVAL
+		, #{userNo}
+		, #{subNo}
+		,'승인'
+		, sysDate
+		,#{acScore}
+		)
+
+	</insert>
+</mapper>

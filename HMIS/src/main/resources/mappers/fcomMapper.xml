@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hmis.mapper.FcomMapper">
+
+
+   <!-- 1. 관리자 :: 가족기업 게시물 등록 -->
+   <insert id="adcreate">
+   
+      INSERT INTO TBL_FCOM
+      (FCOM_NO, FCOM_NAME, COM_TYPE, CEO, CONTENTS)
+      VALUES
+      (SEQ_FCOM.nextval, #{fcomName}, #{comType} , #{ceo}, #{contents})
+   </insert>
+
+
+   <!-- 2. 학생 :: 가족기업 상세 조회 -->
+   <select id="read" resultType="com.hmis.domain.FcomVO"  >
+      SELECT
+         FCOM_NO,
+         FCOM_NAME,
+         COM_TYPE,
+         CEO,
+         CONTENTS
+      FROM
+         TBL_FCOM
+      WHERE
+         FCOM_NO = #{fcomNo}
+   </select>
+
+   <!-- 3. 관리자:: 가족기업 수정 -->
+   <update id="adupdate">
+      UPDATE 
+         TBL_FCOM
+      SET FCOM_NAME = #{fcomName}, COM_TYPE = #{comType}, CEO = #{ceo}, CONTENTS =#{contents}
+      WHERE
+         FCOM_NO = #{fcomNo}
+   </update>
+
+
+   <!-- 4. 관리자:: 가족기업 게시물 삭제 -->
+   <delete id="addelete">
+      DELETE 
+      FROM 
+         TBL_FCOM
+      WHERE 
+         FCOM_NO = #{fcomNo}
+   </delete>
+
+
+
+   <!-- 5. 페이징을 위한 (조건에 맞는 or 전체) 게시물 개수 카운트 -->
+   <select id="countPaging" resultType="int">
+      <![CDATA[
+          SELECT 
+             COUNT(fcomNo) 
+          FROM 
+             TBL_FCOM
+         WHERE 
+            FCOM_NO >= 0  
+      ]]>
+   </select>
+   
+
+   <!-- 6. 제목 검색 -->
+   <sql id="search">
+      <if test="searchType != null">
+         <if test="searchType == 'f'.toString()"> and FCOM_NAME like '%' || #{keyword} || '%' </if>
+         <if test="searchType == 't'.toString()"> and COM_TYPE like '%' || #{keyword} || '%'   </if>
+         <if test="searchType == 'c'.toString()"> and CEO like '%' || #{keyword} || '%'   </if>
+      </if>
+   </sql>
+
+
+
+   <!-- 7. 검색한 리스트 페이징 -->
+   <select id="listSearch" resultType="com.hmis.domain.FcomVO">
+      <![CDATA[  
+      SELECT * FROM(
+         SELECT ROWNUM RNUM
+         , FCOM_NO
+         , FCOM_NAME
+         , COM_TYPE
+         , CEO
+         , CONTENTS 
+         FROM (
+         SELECT 
+            FCOM_NO
+         , FCOM_NAME
+         , COM_TYPE
+         , CEO
+         , CONTENTS 
+         FROM TBL_FCOM
+         WHERE FCOM_NO >= 0 
+      ]]>
+      <include refid="search" />
+            ORDER BY FCOM_NO DESC
+      <![CDATA[    
+            )) WHERE (RNUM >= #{pageStart} AND RNUM <= #{pageEnd}) 
+         ORDER BY FCOM_NO DESC
+      ]]>
+   </select>
+
+   <!-- 8. 가족기업 검색할 때 전체 카운트 가져오기 -->
+   <select id="listSearchCount" resultType="int">
+      <![CDATA[  
+        SELECT 
+           COUNT(FCOM_NO) 
+        FROM 
+           TBL_FCOM
+        WHERE 
+           FCOM_NO >= 0 
+      ]]>
+      
+      <include refid="search" />
+   </select>
+   
+   
+   <!-- 가족기업 게시물 리스트 조회 -->
+<!--    <select id="listAll" resultType="com.hmis.domain.FcomVO">
+   <![CDATA[
+      SELECT
+         FCOM_NO,
+         FCOM_NAME, 
+         COM_TYPE,
+         CEO, 
+         CONTENTS
+      FROM
+         TBL_FCOM
+      WHERE FCOM_NO >= 0 
+      ORDER BY FCOM_NO DESC
+   ]]>
+   </select>
+ -->
+
+   
+</mapper>

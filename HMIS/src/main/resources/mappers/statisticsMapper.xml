@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hmis.mapper.StatisticsMapper">
+
+<sql id="search">
+		<if test="searchType != null">
+			<if test="searchType == 'n'.toString()">
+				and S.SUB_NAME LIKE UPPER('%'||REPLACE(''|| #{keyword}|| '', ' ', '')||'%')
+			</if>
+			<!-- <if test="searchType == 'y'.toString()">
+				and A.AC_DATE like '%' || #{keyword} || '%'
+			</if>
+			<if test="searchType == 'g'.toString()">
+				and U.GRADE like '%' || #{keyword} || '%'
+			</if> -->
+		</if>
+	</sql>
+
+<!-- 자격증 통계 리스트 -->
+<select id="statisticsList" resultType="com.hmis.dto.StatisticsDTO">
+<![CDATA[
+SELECT * FROM(
+SELECT ROWNUM RNUM
+     , SUB_NAME
+     , CNT
+  FROM(
+SELECT S.SUB_NAME
+     , CNT
+  FROM TBL_SUBJECT S,(
+SELECT S.SUB_NO
+     , COUNT(A.USER_NO) AS CNT
+  FROM TBL_APPLY A
+     , TBL_SUBJECT S
+     , TBL_USER U
+
+ WHERE A.SUB_NO(+) = S.SUB_NO
+   AND A.USER_NO = U.USER_NO
+]]>
+
+	<include refid="search" />
+
+<![CDATA[
+GROUP BY S.SUB_NO
+ORDER BY CNT DESC
+)T
+WHERE T.SUB_NO = S.SUB_NO))
+WHERE (RNUM >= #{pageStart} AND RNUM <= #{pageEnd})
+ORDER BY CNT DESC
+]]>
+</select>
+
+<select id="listCount" resultType="int">
+SELECT COUNT(SUB_NO) FROM(
+SELECT S.SUB_NO
+     , COUNT(A.USER_NO) AS CNT
+  FROM TBL_APPLY A
+     , TBL_SUBJECT S
+     , TBL_USER U
+ WHERE A.SUB_NO(+) = S.SUB_NO
+   AND A.USER_NO = U.USER_NO
+	<include refid="search"></include>
+GROUP BY S.SUB_NO
+ORDER BY CNT DESC)
+</select>
+
+<select id="excel" resultType="com.hmis.dto.StatisticsDTO">
+SELECT SUB_NAME
+     , CNT
+  FROM(
+SELECT S.SUB_NAME
+     , CNT
+  FROM TBL_SUBJECT S,(
+SELECT S.SUB_NO
+     , COUNT(A.USER_NO) AS CNT
+  FROM TBL_APPLY A
+     , TBL_SUBJECT S
+     , TBL_USER U
+ WHERE A.SUB_NO(+) = S.SUB_NO
+   AND A.USER_NO = U.USER_NO
+GROUP BY S.SUB_NO
+ORDER BY CNT DESC
+)T
+WHERE T.SUB_NO = S.SUB_NO)
+</select>
+
+<select id="mainList" resultType="com.hmis.dto.StatisticsDTO">
+<![CDATA[
+SELECT * FROM(
+SELECT ROWNUM RNUM
+     , SUB_NAME
+     , CNT
+  FROM(
+SELECT S.SUB_NAME
+     , CNT
+  FROM TBL_SUBJECT S,(
+SELECT S.SUB_NO
+     , COUNT(A.USER_NO) AS CNT
+  FROM TBL_APPLY A
+     , TBL_SUBJECT S
+     , TBL_USER U
+ WHERE A.SUB_NO(+) = S.SUB_NO
+   AND A.USER_NO = U.USER_NO
+GROUP BY S.SUB_NO
+ORDER BY CNT DESC
+)T
+WHERE T.SUB_NO = S.SUB_NO))
+WHERE (RNUM >= 1 AND RNUM <= 3)
+ORDER BY CNT DESC
+]]>
+</select>
+
+
+</mapper>

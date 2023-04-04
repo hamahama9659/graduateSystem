@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hmis.mapper.MyPageMapper">
+	
+	<!-- 1. 사용자 :: 내정보확인페이지 -->
+	<select id="myInfo" resultType="com.hmis.domain.UserVO">
+		SELECT
+		user_No, grade, state, user_Name
+	    FROM
+	    TBL_USER
+	    WHERE user_No = #{userNo}
+	</select>
+
+	<!-- 2. 사용자 :: 내정보수정하기 -->
+	<update id="myInfoUpdate">
+		UPDATE
+		TBL_USER
+		SET 
+			grade = #{grade},
+			user_Name = #{userName},
+			state = #{state},
+			user_Pw = #{userPw}
+		WHERE
+			user_No = #{userNo}
+	</update>
+	
+	<!-- 3. 비밀번호 체크 -->
+	<!-- <select id="checkPw" resultType="int">
+		SELECT
+		count(*)
+		FROM
+		TBL_USER
+		WHERE user_id = #{userNo}
+		AND user_pw = #{userPw}
+	</select> -->
+
+	<!-- 내 목표 설정(등록) -->
+	<!-- <insert id="goalInsert">
+		INSERT INTO TBL_GOAL(
+							 GOAL_NO
+						   , GOAL_NAME
+						   , GOAL_SCORE
+						   , RESOLUTION
+						   , USER_NO
+						   , TARGET_DATE
+						   )
+		VALUES(
+			   SEQ_GOAL.NEXTVAL
+			 , #{goalName}
+			 , #{goalScore}
+			 , #{resolution}
+			 , #{userNo}
+			 , #{targetDate}
+			 )
+	</insert>
+	
+	목표 리스트
+	<select id="goalList" resultType="com.hmis.domain.GoalVO">
+		SELECT GOAL_NO
+			 , 100 - (TRUNC(TARGET_DATE - SYSDATE) + 1) AS "PROGRESS"
+     		 , TRUNC(TARGET_DATE - SYSDATE) + 1 AS "dDay"
+     		 , GOAL_NAME
+     		 , GOAL_STATE
+     		 , START_DATE
+     		 , RESOLUTION
+     		 , USER_NO
+     		 , TARGET_DATE
+     		 , END_DATE
+     	  FROM TBL_GOAL
+    	 WHERE USER_NO = #{userNo}
+    	 ORDER BY GOAL_NO DESC
+	</select>
+	
+	목표 상세보기
+	<select id="goalSelect" resultType="com.hmis.domain.GoalVO">
+		SELECT GOAL_NO
+			 , 100 - (TRUNC(TARGET_DATE - SYSDATE) + 1) AS "PROGRESS"
+     		 , TRUNC(TARGET_DATE - SYSDATE) + 1 AS "dDay"
+     		 , GOAL_NAME
+     		 , GOAL_STATE
+     		 , START_DATE
+     		 , RESOLUTION
+     		 , USER_NO
+     		 , TARGET_DATE
+     		 , END_DATE
+     	  FROM TBL_GOAL
+     	 WHERE GOAL_NO = #{goalNo}
+	</select>
+ -->
+</mapper>

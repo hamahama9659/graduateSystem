@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hmis.mapper.MisAttMapper">
+
+	<!-- mis 출결 리스트 조회  -->
+	<select id="list" resultType="com.hmis.domain.MisAttVO">
+	<![CDATA[
+		SELECT
+			M.MIS_ATT_NO, 
+			M.MIS_ATT_DATE, 
+			M.USER_NO,
+			M.MIS_NO,
+			U.GRADE,
+			U.USER_NAME
+		FROM
+			TBL_MIS_ATT M,
+			TBL_USER U
+		WHERE M.USER_NO = U.USER_NO
+		  AND M.MIS_NO = #{misNo}
+		ORDER BY GRADE
+		
+	]]>
+	</select>
+	
+	<!-- mis 출결 등록 -->
+	<insert id="insert">
+	  	 <selectKey keyProperty="misAttNo" resultType="Integer" order="BEFORE">
+	  	select SEQ_MIS_ATT.NEXTVAL from dual
+	  </selectKey>
+		INSERT INTO TBL_MIS_ATT
+			(MIS_ATT_NO, USER_NO, MIS_ATT_DATE, MIS_NO)
+		VALUES 
+			(#{misAttNo}, #{userNo}, #{misAttDate}, #{misNo})
+	</insert>
+	
+	<!-- mis 출결제외 한 학생 리스트 조회  -->
+	<select id="stuOtherList" resultType="com.hmis.domain.UserVO">
+	
+		SELECT 
+			USER_NO, 
+			USER_NAME,
+			GRADE 
+		FROM 
+			TBL_USER U
+		WHERE STATE = '재학' 
+		AND USER_NO NOT IN(SELECT USER_NO FROM TBL_MIS_ATT where MIS_NO = #{misNo})
+		ORDER BY GRADE
+	
+	</select>
+
+	
+	<!-- mis 출결 학생 리스트 조회  -->
+	<select id="stuList" resultType="com.hmis.domain.UserVO">
+	
+		SELECT 
+			USER_NO, 
+			USER_NAME,
+			GRADE 
+		FROM 
+			TBL_USER 
+		WHERE STATE = '재학'
+		ORDER BY GRADE ASC, USER_NO ASC
+	
+	</select>
+	
+	<!-- mis 출결 삭제(학생 삭제) -->
+	<delete id="delete">
+		DELETE FROM TBL_MIS_ATT
+		WHERE MIS_NO = #{misNo}
+	</delete>
+	
+	<!-- mis 내 점수 상세 조회 -->
+	<select id="myMisList">
+		SELECT
+			ROWNUM, 
+			M.TIMES, 
+			M.TITLE, 
+			A.MIS_ATT_DATE
+		FROM
+			TBL_MIS M, 
+			TBL_MIS_ATT A
+		WHERE M.MIS_NO = #{A.misNo}
+	</select>
+	
+</mapper>

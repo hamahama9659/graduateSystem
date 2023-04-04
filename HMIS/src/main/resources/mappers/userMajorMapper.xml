@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="com.hmis.mapper.UserMajorMapper">
+
+
+   <!-- 학생 :: '선택'한 전공과목 리스트 -->
+   <select id="listAll" resultType="com.hmis.domain.UserMajorVO">
+
+      SELECT
+         M.MAJOR_NO,
+         M.COURSE_NO,
+         M.MAJOR_NAME, 
+         M.TRACK_CODE,
+         M.GRADE, 
+         P.PROF_NAME
+      FROM
+         TBL_MAJOR M,
+         TBL_USER_MAJOR UM,
+         TBL_PROFESSOR P
+      WHERE 
+         UM.MAJOR_NO = M.MAJOR_NO
+      AND   M.PROF_NO = P.PROF_NO 
+      AND UM.USER_NO = #{userNo}
+      ORDER BY M.MAJOR_NO DESC
+
+   </select>
+
+
+
+ 
+
+   <!-- 학생 :: 수강한 전공과목 등록 -->
+   <insert id="create">
+      INSERT INTO TBL_USER_MAJOR
+      (USER_MAJOR_NO, USER_NO,
+      MAJOR_NO)
+      VALUES
+      (SEQ_USER_MAJOR.NEXTVAL, #{userNo}, #{majorNo})
+   </insert>
+
+
+
+   <!-- 학생 :: 수강한 전공과목 삭제 ('수강한 전공과목 등록' 전에 필수 실행) -->
+   <delete id="umdelete">
+      DELETE FROM TBL_USER_MAJOR
+      WHERE USER_NO =
+      #{userNo}
+   </delete>
+
+ 
+   <!-- 학생 :: 선택하지 '않은' 전공과목  리스트  -->
+   <select id="otherList" resultType="com.hmis.domain.UserMajorVO">
+   
+      SELECT 
+         M.MAJOR_NO,
+         M.COURSE_NO,
+         M.MAJOR_NAME, 
+         M.TRACK_CODE,
+         M.GRADE, 
+         P.PROF_NAME
+      FROM 
+         TBL_MAJOR M,
+         TBL_PROFESSOR P
+      WHERE 
+      M.MAJOR_NO NOT IN(SELECT UM.MAJOR_NO FROM TBL_USER_MAJOR UM where UM.USER_NO = #{userNo})
+      AND   M.PROF_NO = P.PROF_NO
+      AND   M.MAJOR_NO >= 0 
+      ORDER BY 
+         M.MAJOR_NO DESC
+   
+   </select>
+
+
+
+</mapper>

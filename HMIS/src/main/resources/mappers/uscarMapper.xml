@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hmis.mapper.UscarMapper">
+
+
+
+
+   <!-- 1. 학생 :: 진로 선택 팝업창 -> 진로명 검생 결과 페이지 -->
+   <select id="searchCar" resultType="com.hmis.domain.CarrierVO">
+      SELECT CAR_NO
+      , CAR_NAME
+
+      FROM
+      TBL_CARRIER
+      WHERE UPPER(CAR_NAME)
+      LIKE UPPER('%'||REPLACE(''||
+      #{carName}|| '', ' ',
+      '')||'%')
+
+   </select>
+
+
+   <!-- 2. 학생 :: myPage/myScore -> 진로 목록 팝업창 -->
+   <select id="carList" resultType="com.hmis.domain.CarrierVO">
+<![CDATA[
+      SELECT 
+        CAR_NO
+      , CAR_NAME
+      FROM   TBL_CARRIER
+      WHERE CAR_NO NOT IN (SELECT CAR_NO FROM TBL_USCAR where USER_NO = #{USER_NO})
+      AND CAR_NO >= 0
+      ORDER BY CAR_NO
+]]>
+   </select>
+
+   <!--3. 학생 :: 선택한 진로 목록 -->
+   <select id="everyUscarList" resultType="com.hmis.domain.UscarVO">
+      SELECT
+      US.USCAR_NO,
+      C.CAR_NAME
+      FROM
+      TBL_USCAR US,
+      TBL_CARRIER C
+      WHERE C.CAR_NO =
+      US.CAR_NO
+      AND
+      US.USER_NO
+      = #{userNo}
+      ORDER BY C.CAR_NO DESC
+   </select>
+
+   <!-- 4. 학생 :: myPage/myScore -> 학생 진로 등록 -->
+   <!-- <insert id="create"> INSERT INTO TBL_USCAR (USCAR_NO, USER_NO, CAR_NO) 
+      VALUES(seq_uscar.nextval, #{userNo} , #{carNo}) </insert> -->
+
+   <!-- 4. 학생 :: myPage/myScore -> 학생 진로 등록 -->
+   <insert id="create">
+
+      <!-- <selectKey keyProperty="uscarNo" resultType="int" order="BEFORE"> 
+         SELECT SEQ_APPLY.NEXTVAL FROM DUAL </selectKey> -->
+
+      INSERT INTO TBL_USCAR(USCAR_NO, USER_NO, CAR_NO)
+      VALUES(SEQ_USCAR.NEXTVAL, #{userNo}, (SELECT CAR_NO FROM TBL_CARRIER
+      WHERE CAR_NAME = #{carName}))
+   </insert>
+
+
+
+   <!-- 5. 학생 :: myPage -> 선택한 진로 삭제 -->
+   <delete id="delete">
+      DELETE FROM TBL_USCAR WHERE USCAR_NO = #{uscarNo}
+   </delete>
+
+   <!-- 학생: 진로 리스트 (my Page) -->
+   <!-- <select id="listAll" resultType="com.hmis.domain.UscarVO"> <![CDATA[ 
+      SELECT US.USCAR_NO, US.USER_NO, US.CAR_NO FROM TBL_USCAR US, TBL_USER U, 
+      TBL_CARRIER C WHERE US.USER_NO = U.USER_NO AND US.CAR_NO = C.CAR_NO ORDER 
+      BY US.USCAR_NO DESC ]]> </select> -->
+
+   <!-- <select id="List"> SELECT CAR_NAME FROM TBL_CARRIER C, TBL_USCAR U 
+      WHERE C.CAR_NO = U.CAR_NO AND U.USER_NO= ${userNo} </select> -->
+
+   <!-- 학생: 수정 - 제외한 진로 리스트 id변경필요 -->
+   <!-- <select id="uscarOtherList" resultType="com.hmis.domain.CarrierVO"> 
+      SELECT CAR_NAME FROM TBL_CARRIER WHERE CAR_NO NOT IN(SELECT CAR_NO FROM TBL_USCAR 
+      where USER_NO = #{userNo}) ORDER BY CAR_NO </select> -->
+
+   <!--학생 : 수정 - 선택한 진로 리스트 -->
+   <!-- <select id="uscarList" resultType="com.hmis.domain.CarrierVO"> SELECT 
+      CAR_NAME FROM TBL_CARRIER WHERE CAR_NO IN(SELECT CAR_NO FROM TBL_USCAR where 
+      USER_NO = #{userNo}) ORDER BY CAR_NO </select> -->
+
+
+
+   <!-- 학생 :: 마이페이지 - 진로 읽기 -->
+
+   <!-- <select id="read" resultType="com.hmis.domain.UscarVO"> SELECT CAR_NAME 
+      FROM TBL_CARRIER C, TBL_USCAR U WHERE U.CAR_NO= ${carNo} </select> -->
+
+
+</mapper>

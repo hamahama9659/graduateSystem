@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hmis.mapper.GraduationMapper">
+
+
+
+
+   <!-- 관리자 :: 졸업심사 게시글 등록 -->
+   <insert id="adCreate">
+      INSERT INTO
+      TBL_GRADUATION
+      (GRADU_NO,
+      TITLE,
+      APP_START,
+      APP_END,
+      REG_DATE,
+      GRADU_STATE)
+      VALUES
+      (SEQ_GRADUATION.NEXTVAL,
+      #{title},
+      #{appStart},
+      #{appEnd},
+      SYSDATE,
+      #{graduState} )
+   </insert>
+
+   <!-- 관리자 :: 졸업심사 게시글 상세보기 -->
+   <select id="adRead" resultType="com.hmis.domain.GraduationVO">
+      SELECT
+      GRADU_NO,
+      APP_START,
+      APP_END,
+      REG_DATE,
+      TITLE,
+      GRADU_STATE
+      FROM
+      TBL_GRADUATION
+      WHERE
+      GRADU_NO =   #{graduNo}
+   </select>
+
+
+ <!-- 관리자 :: 졸업심사 게시글 수정 --> 
+   <update id="adUpdate">
+      UPDATE
+      TBL_GRADUATION
+      SET
+      TITLE = #{title},
+      APP_START = #{appStart},
+      APP_END = #{appEnd},
+      GRADU_STATE =#{graduState}
+      WHERE
+      GRADU_NO = #{graduNo}
+   </update> 
+
+   <!-- 제목 검색 :: 프로그램명, 유형, 연도 -->
+   <sql id="search">
+      <if test="searchType != null">
+         <if test="searchType == 't'.toString()"> and TITLE like '%' || #{keyword} || '%' </if>
+         <!-- <if test="searchType == 's'.toString()"> and APPSTART = #{keyword} 
+            </if> -->
+
+      </if>
+   </sql>
+
+
+   <!-- 학생 , 관리자 :: 프로그램 페이징 된 리스트 -->
+   <select id="listSearch"
+      resultType="com.hmis.domain.GraduationVO">
+      
+      <![CDATA[  
+      SELECT
+      *
+      FROM(
+         SELECT
+         rownum rnum, 
+            gradu_No, 
+            app_start, 
+            app_end, 
+            reg_date, 
+            title, 
+            gradu_state 
+         FROM (
+            SELECT 
+            gradu_No, app_start, app_end, reg_date, title, gradu_state 
+            FROM 
+            TBL_GRADUATION
+            WHERE gradu_No > 0 
+      ]]>
+
+      <!-- search에 대한 SQL문을 삽입 -->
+      <include refid="search" />
+      ORDER BY gradu_No DESC, title DESC
+         
+      <![CDATA[    
+            )) WHERE (rnum >= #{pageStart} AND rnum <= #{pageEnd}) 
+         ORDER BY title DESC
+      ]]>
+   </select>
+
+
+
+   <!-- 프로그램 검색할 때 전체 카운트 가져오기 -->
+   <select id="listSearchCount" resultType="int">
+      <![CDATA[  
+        SELECT 
+           COUNT(GRADU_NO) 
+        FROM 
+           TBL_GRADUATION
+        WHERE 
+           GRADU_NO > 0
+      ]]>
+
+      <include refid="search" />
+   </select>
+
+   <select id="countPaging" resultType="int">
+      <![CDATA[
+          SELECT 
+             COUNT(GRADU_NO) 
+          FROM 
+             TBL_GRADUATION
+         WHERE 
+            GRADU_NO > 0  
+      ]]>
+   </select>
+
+   
+
+</mapper>

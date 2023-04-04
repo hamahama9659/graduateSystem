@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hmis.mapper.UserProgramMapper">
+
+   <!-- 학생 :: 신청서 등록 -->
+   <!-- jsp에서 userMapper에서 사용자 정보 자동 읽어오기 -->
+   <!-- TO DO // 첨부파일 추가해야됨 -->
+   <insert id="create">
+      <selectKey keyProperty="userProNo" resultType="int"
+         order="BEFORE">
+         SELECT SEQ_USER_PROGRAM.NEXTVAL FROM DUAL
+      </selectKey>
+
+
+      INSERT INTO TBL_USER_PROGRAM (USER_PRO_NO, APPLY_DATE,
+      USER_NO, PRO_NO)
+      values(#{userProNo}, sysdate,
+      #{userNo}, #{proNo})
+   </insert>
+
+   <!-- 학생 :: 다중 파일 등록 <insert id="createFiles"> INSERT INTO TBL_PRO_FILE(PRO_FILE_NO 
+      , PRO_FILE_NAME , USER_PRO_NO) VALUES(SEQ_PROFILE.NEXTVAL , #{proFileName} 
+      , #{userProNo}) </insert> -->
+
+   <!-- 학생 :: 프로그램 신청서 상세보기에서 신청 취소하기 -->
+
+   <delete id="delete">
+      DELETE
+      FROM TBL_USER_PROGRAM
+      where USER_PRO_NO =
+      #{userProNo}
+   </delete>
+
+
+   <!--관리자 :: 신청서 리스트 굳이 필요없는 기능 -->
+   <!-- <select id="adlistSearch" resultType="com.hmis.domain.ProgramVO"> 
+      <![CDATA[ SELECT ROWNUM, U.USER_NAME, U.USER_NO, F.PRO_FILE_NO FROM TBL_USER 
+      U , TBL_USER_PROGRAM UP, TBL_PROGRAM P, TBL_PRO_FILE F WHERE P.PRO_NO = UP.PRO_NO 
+      AND F.USER_PRO_NO = UP.USER_PRO_NO AND U.USER_NO = #{userNo} ]]> ORDER BY 
+      P.PRO_NO DESC, P.APPSTART DESC <![CDATA[ )) WHERE (RNUM >= #{pageStart} AND 
+      RNUM <= #{pageEnd}) ORDER BY P.PRO_NO DESC, P.APPSTART DESC ]]> </select> -->
+
+
+
+
+   <!-- 관리자 :: 전체 신청 내역 목록 리스트 -->
+   <select id="adlistSearch"
+      resultType="com.hmis.domain.UserProgramVO">
+<![CDATA[ 
+
+SELECT * FROM(
+  SELECT ROWNUM RNUM
+        , USER_PRO_NO
+       , USER_NO
+       , USER_NAME
+       ,PRO_NO
+        , PRO_NAME
+        , APPLY_DATE
+        , PRO_STATE
+   FROM (
+  SELECT UP.USER_PRO_NO
+       , UP.USER_NO
+       , U.USER_NAME
+       ,P.PRO_NO
+        , P.PRO_NAME
+        , UP.APPLY_DATE
+        , UP.PRO_STATE
+  FROM TBL_USER_PROGRAM UP
+     , TBL_PROGRAM P
+     , TBL_USER U
+ WHERE UP.PRO_NO = P.PRO_NO
+   AND U.USER_NO = UP.USER_NO
+   AND UP.USER_PRO_NO > 0
+]]>
+      <include refid="adlistSearch"></include>
+
+      ORDER BY UP.USER_PRO_NO DESC, UP.APPLY_DATE DESC
+  
+<![CDATA[    
+ )) WHERE (RNUM >= #{pageStart} AND RNUM <= #{pageEnd}) 
+ORDER BY USER_PRO_NO DESC, APPLY_DATE DESC
+]]>
+   </select>
+
+
+   <!-- 관리자 :: 전체 신청 내역 목록 리스트 카운트 -->
+   <select id="adlistSearchCount" resultType="int">
+<![CDATA[ 
+SELECT COUNT(*) AS CNT
+  FROM(
+SELECT * FROM(
+  SELECT ROWNUM RNUM
+        , USER_PRO_NO
+       , USER_NO
+       , USER_NAME
+        , PRO_NAME
+        , APPLY_DATE
+        , PRO_STATE
+   FROM (
+  SELECT UP.USER_PRO_NO
+       , UP.USER_NO
+       , U.USER_NAME
+        , P.PRO_NAME
+        , UP.APPLY_DATE
+        , UP.PRO_STATE
+  FROM TBL_USER_PROGRAM UP
+     , TBL_PROGRAM P
+     , TBL_USER U
+ WHERE UP.PRO_NO = P.PRO_NO
+   AND U.USER_NO = UP.USER_NO
+   AND UP.USER_PRO_NO > 0
+ ]]>
+      <include refid="adlistSearch"></include>
+      )))
+   </select>
+
+
+   <sql id="adlistSearch">
+      <if test="searchType != null">
+         <if test="searchType == 'no'.toString()">
+            AND U.USER_NO like '%' || #{keyword} || '%'
+         </if>
+         <if test="searchType == 'name'.toString()">
+            AND U.USER_NAME like '%' || #{keyword} || '%'
+         </if>
+         <if test="searchType == 'nn'.toString()">
+            AND ( U.USER_NO like '%' || #{keyword} || '%' OR
+            U.USER_NAME like #{keyword} || '%')
+         </if>
+      </if>
+   </sql>
+
+
+   <!-- 관리자 :: 프로그램 신청서 관리 - 신청 승인 -->
+   <update id="accept">
+      UPDATE TBL_USER_PROGRAM
+      SET PRO_STATE = '승인'
+      WHERE
+      USER_PRO_NO = #{userProNo}
+   </update>
+
+
+   <!--관리자 :: 프로그램 신청서 관리 - 신청 거절 -->
+   <update id="deny">
+      UPDATE TBL_USER_PROGRAM
+      SET PRO_STATE = '거절'
+      WHERE
+      USER_PRO_NO = #{userProNo}
+   </update>
+
+
+   <!-- 학생 :: 다중 파일 등록 -->
+   <insert id="insertFile">
+
+      INSERT INTO TBL_PRO_FILE(FILE_NO
+      , FILE_NAME
+      ,USER_PRO_NO)
+      VALUES(SEQ_PRO_FILE.NEXTVAL
+      , #{fileName}
+      , #{userProNo})
+
+   </insert>
+
+
+   <!-- 파일 목록 -->
+   <select id="fileList" resultType="com.hmis.domain.FileVO">
+      SELECT FILE_NO
+      ,
+      SUBSTR(FILE_NAME, 50) AS FILE_NAME
+      , FILE_NAME AS FILE_LOCATION
+      ,
+      USER_PRO_NO
+      FROM TBL_PRO_FILE
+      WHERE USER_PRO_NO = #{userProNo}
+   </select>
+
+
+
+   <select id="acceptProList"
+      resultType="com.hmis.domain.UserProgramVO">
+      SELECT
+      P.PRO_NAME,
+      P.TYPE
+      FROM
+      TBL_USER_PROGRAM UP,
+      TBL_PROGRAM P
+      WHERE P.PRO_NO =
+      UP.PRO_NO
+      AND UP.USER_NO = #{userNo}
+      AND UP.PRO_STATE = '승인'
+      ORDER BY P.APPSTART DESC
+   </select>
+
+
+   <select id="ProList" resultType="com.hmis.domain.UserProgramVO">
+      SELECT
+      UP.USER_PRO_NO,
+      P.PRO_NAME,
+      P.TYPE,
+      UP.PRO_STATE
+      FROM
+      TBL_USER_PROGRAM UP,
+      TBL_PROGRAM P
+      WHERE P.PRO_NO =
+      UP.PRO_NO
+      AND UP.USER_NO = #{userNo}
+
+      ORDER BY P.APPSTART DESC
+   </select>
+
+
+   <!-- 2. 관리자:: 프로그램 상세보기 -->
+   <select id="read" resultType="com.hmis.domain.UserProgramVO">
+      select
+      USER_PRO_NO, APPLY_DATE, PRO_STATE, USER_NO, PRO_NO
+      FROM
+      TBL_USER_PROGRAM
+      where USER_PRO_NO = #{userProNo}
+   </select>
+
+
+   <!-- 관리자 :: 졸업인증신청 관리 - 신청자리스트  -->
+   <select id="adUserList"
+      resultType="com.hmis.domain.UserProgramVO">
+     SELECT 
+        UP.USER_PRO_NO
+        , UP.USER_NO
+        , U.USER_NAME
+        , UP.PRO_STATE
+       , P.PRO_NO
+  FROM TBL_USER_PROGRAM UP
+     , TBL_USER U
+     ,TBL_PROGRAM P
+ WHERE UP.USER_NO = U.USER_NO
+   AND P.PRO_NO = UP.PRO_NO
+   AND P.PRO_NO = #{proNo}
+   </select>
+   
+   <!-- 관리자 :: 졸업인증신청 관리 - 신청 상세조회 -->
+   <select id="adUserProgramSelect"
+      resultType="com.hmis.domain.UserProgramVO">
+      SELECT UP.USER_PRO_NO
+      ,
+      U.USER_NO
+      , U.USER_NAME
+      , UP.PRO_STATE
+      ,
+      UP.APPLY_DATE
+      , P.PRO_NO
+      FROM TBL_USER_PROGRAM UP
+      , TBL_PROGRAM P
+      , TBL_USER U
+      WHERE UP.PRO_NO = P.PRO_NO
+      AND UP.USER_NO =
+      U.USER_NO
+      AND UP.USER_PRO_NO
+      = #{userProNo}
+   </select>
+
+</mapper>

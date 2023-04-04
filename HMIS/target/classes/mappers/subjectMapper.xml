@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hmis.mapper.SubjectMapper">
+
+	<!-- 1. 인증항목 목록(관리자) -->
+	<select id="list" resultType="com.hmis.domain.SubjectVO">
+	<![CDATA[
+		SELECT
+		sub_No, categ, area, sub_Name, score, publication, regdate
+		FROM
+		TBL_SUBJECT
+		WHERE sub_No >= 0
+		ORDER BY categ DESC
+	]]>
+		<!-- 필수, 선택 순으로 정렬 -->
+	</select>
+
+	<!-- 2. 인증항목 등록(관리자) -->
+	<insert id="insert">
+		INSERT INTO
+		TBL_SUBJECT (sub_No, categ, area,
+		sub_Name, score, publication, guide)
+		VALUES(seq_sub.nextval, #{categ},
+		#{area}, #{subName}, #{score}, #{publication}, #{guide})
+	</insert>
+
+	<!-- 3. 인증항목 상세내역조회(관리자) -->
+	<select id="select" resultType="com.hmis.domain.SubjectVO">
+		SELECT
+		sub_No, categ, area,
+		sub_Name, score, guide, publication, regdate
+		FROM
+		TBL_SUBJECT
+		WHERE
+		sub_No = #{subNo}
+	</select>
+
+	<!-- 4. 인증항목 수정(관리자) -->
+	<select id="update">
+		UPDATE
+		TBL_SUBJECT
+		SET categ = #{categ}, area =
+		#{area}, sub_Name = #{subName},
+		score = #{score}, guide = #{guide}, publication = #{publication}
+		WHERE
+		sub_No = #{subNo}
+	</select>
+
+	<!-- 5. 인증항목 삭제(관리자) -->
+	<delete id="delete">
+		DELETE FROM TBL_SUBJECT
+		WHERE sub_No = #{subNo}
+	</delete>
+
+	<!-- 사용자 대쉬보드 -> applyMapper로 이동 -->
+	<select id="stuApplyList">
+		SELECT
+		rownum rnum, s.categ, s.area, s.sub_Name,
+		s.publication, s.score, a.ac_Date
+		FROM
+		TBL_SUBJECT s, TBL_APPLY s
+		WHERE
+		s.sub_No = a.sub_No AND a.applyState IN('승인');
+	</select>
+
+	<!-- 6. 검색 -->
+	<!-- 인증항목 분류/영역/항목명/발행처로 키워드검색가능 -->
+	<sql id="search">
+		<if test="searchType != null">
+			<if test="searchType == 'c'.toString()">and categ like '%' || #{keyword} || '%' </if>
+			<if test="searchType == 'a'.toString()">and area like '%' || #{keyword} || '%' </if>
+			<!-- <if test="searchType == 'sn'.toString()">and sub_Name like '%' || 
+				#{keyword} || '%' </if> -->
+			<if test="searchType == 'sn'.toString()">and UPPER(SUB_NAME) LIKE UPPER('%'||REPLACE(''|| #{keyword}|| '', ' ', '')||'%') </if>
+			<if test="searchType == 'sc'.toString()">and score like '%' || #{keyword} || '%' </if>
+			<if test="searchType == 'p'.toString()">and publication like '%' || #{keyword} || '%' </if>
+		</if>
+	</sql>
+
+	<!-- 키워드로 검색된 리스트 목록 불러오기 -->
+	<select id="listSearch" resultType="com.hmis.domain.SubjectVO">
+		<![CDATA[  
+		SELECT
+		*
+		FROM(
+			SELECT rownum rnum, sub_No, categ, area, sub_Name, score, publication 
+			FROM (
+				SELECT 
+				sub_No, categ, area, sub_Name, score, publication 
+				FROM 
+				TBL_SUBJECT
+				WHERE sub_No > 0 
+		]]>
+
+		<!-- search에 대한 SQL문을 삽입 -->
+		<include refid="search" />
+		ORDER BY sub_No DESC, categ DESC
+			
+		<![CDATA[    
+				)) WHERE (rnum >= #{pageStart} AND rnum <= #{pageEnd}) 
+			ORDER BY categ DESC
+		]]>
+	</select>
+
+	<!-- 페이징처리를 위한 검색된 리스트 목록의 ROW의 수 계산 -->
+	<select id="listSearchCount" resultType="int">
+		<![CDATA[  
+		  SELECT
+		  count(sub_No) 
+		  FROM
+		  TBL_SUBJECT 
+		  WHERE
+		  sub_No > 0 
+		]]>
+		<include refid="search" />
+	</select>
+
+	<!-- 6. 목록페이징처리 -->
+	<select id="listCriteria" resultType="com.hmis.domain.UserVO">
+		<![CDATA[
+			SELECT
+			*
+			FROM (
+		 		SELECT 
+		  		rownum rnum, sub_No, categ, area, sub_Name, score, publication
+		 		FROM 
+		   		TBL_SUBJECT
+		   		WHERE sub_No > 0 ) 
+		 	WHERE (rnum >= #{pageStart} AND rnum <= #{pageEnd}) 
+		 	ORDER BY categ DESC
+		 	limit #{pageStart}, #{perPageNum}
+		 ]]>
+	</select>
+
+	<select id="countPaging" resultType="int">
+		<![CDATA[
+			 SELECT 
+			 count(sub_No) 
+			 FROM 
+			 TBL_SUBJECT
+			 WHERE 
+			 sub_No > 0 
+		]]>
+	</select>
+
+</mapper>

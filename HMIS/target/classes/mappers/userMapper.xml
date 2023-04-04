@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hmis.mapper.UserMapper">
+
+   <select id="login" resultType="com.hmis.domain.UserVO">
+
+      SELECT USER_NO
+      , USER_PW
+      , USER_NAME
+      , REG_NUM
+      , STATE
+      , GRADE
+      , AUTHORITY
+      FROM TBL_USER
+      WHERE USER_NO = #{userNo}
+      AND USER_PW = #{userPw}
+   </select>
+
+   <!-- 1. 사용자(학생) 등록(관리자) -->
+   <insert id="insert">
+      INSERT INTO
+      TBL_USER(user_No, user_Name, reg_Num, state, grade)
+      VALUES(#{userNo}, #{userName}, seq_reg.nextval, #{state}, #{grade})
+   </insert>
+
+   <!-- 2. 사용자(학생) 목록(관리자) -->
+   <select id="list" resultType="com.hmis.domain.UserVO">
+      SELECT
+      reg_num, user_No, grade, user_Name, state
+      FROM
+      TBL_USER
+      WHERE authority = 0
+      ORDER BY user_No DESC, grade DESC
+   </select>
+
+
+
+
+   <select id="graduateList" resultType="com.hmis.domain.UserVO">
+
+      SELECT ROWNUM NUM, USER_NO, USER_PW, USER_NAME, GRADE, STATE
+      FROM TBL_USER
+      WHERE STATE = '재학'
+      AND GRADE = 4
+      AND USER_NO >= 0
+      ORDER BY user_No ASC
+
+   </select>
+
+
+
+   <select id="read" resultType="com.hmis.domain.UserVO">
+      SELECT
+      reg_num, user_No, grade, user_Name, state
+      FROM
+      TBL_USER
+      WHERE user_No = #{userNo}
+   </select>
+
+   <!-- 3. 사용자(학생) 수정(관리자) -->
+   <update id="update">
+      UPDATE
+      TBL_USER
+      SET grade = #{grade}, user_Name = #{userName},
+      state = #{state}
+      WHERE user_No = #{userNo}
+   </update>
+
+   <!-- 4. 사용자(학생) 삭제(관리자) -->
+   <delete id="delete">
+      DELETE FROM TBL_USER
+      WHERE user_No = #{userNo}
+   </delete>
+
+   <!-- 5. 검색 -->
+   <!-- 인증항목 분류/영역/항목명/발행처로 키워드검색가능 -->
+   <sql id="search">
+      <if test="searchType != null">
+         <if test="searchType == 'uno'.toString()">and user_No like '%' || #{keyword} || '%' </if>
+         <if test="searchType == 'g'.toString()">and grade like '%' || #{keyword} || '%' </if>
+         <if test="searchType == 'un'.toString()">and user_Name like '%' || #{keyword} || '%' </if>
+         <if test="searchType == 's'.toString()">and state like '%' || #{keyword} || '%' </if>
+      </if>
+   </sql>
+
+   <!-- 키워드로 검색된 리스트 목록 불러오기 -->
+   <select id="listSearch" resultType="com.hmis.domain.UserVO">
+      <![CDATA[  
+      SELECT
+      *
+      FROM(
+         SELECT rownum rnum, user_No, grade, user_Name, state
+         FROM (
+            SELECT 
+            user_No, grade, user_Name, state, authority
+            FROM 
+            TBL_USER
+            WHERE user_No > 0 AND authority = 0
+      ]]>
+
+      <!-- search에 대한 SQL문을 삽입 -->
+      <include refid="search" />
+      ORDER BY user_No DESC, grade DESC
+         
+      <![CDATA[    
+            )) WHERE (rnum >= #{pageStart} AND rnum <= #{pageEnd}) 
+         ORDER BY user_No DESC
+      ]]>
+   </select>
+
+   <!-- 페이징처리를 위한 검색된 리스트 목록의 ROW의 수 계산 -->
+   <select id="listSearchCount" resultType="int">
+      <![CDATA[  
+        SELECT
+        count(user_No) 
+        FROM
+        TBL_USER 
+        WHERE
+        user_No > 0 AND authority = 0
+      ]]>
+      <include refid="search" />
+   </select>
+
+   <!-- 6. 목록페이징처리 -->
+   <select id="listCriteria" resultType="com.hmis.domain.UserVO">
+      <![CDATA[
+         SELECT
+         *
+         FROM (
+             SELECT 
+              rownum rnum, user_No, grade, user_Name, state
+             FROM 
+               TBL_USER
+               WHERE user_No > 0 ) 
+          WHERE (rnum >= #{pageStart} AND rnum <= #{pageEnd}) 
+          ORDER BY user_No DESC, grade DESC
+          limit #{pageStart}, #{perPageNum}
+       ]]>
+   </select>
+
+   <select id="countPaging" resultType="int">
+      <![CDATA[
+          SELECT 
+          count(user_No) 
+          FROM 
+          TBL_USER 
+          WHERE 
+          user_No > 0 
+      ]]>
+   </select>
+
+   <!-- 관리자 :: 대시보드 - 신청 건수 -->
+   <select id="applyCount" resultType="int">
+      SELECT COUNT(*) FROM TBL_APPLY WHERE APPLY_STATE = '승인대기'
+   </select>
+
+   <!-- 관리자 :: 대시보드 - 졸업예정자 수 -->
+   <select id="graduateCount" resultType="int">
+      SELECT COUNT(*) FROM TBL_USER WHERE STATE = '재학' AND GRADE = 4
+   </select>
+
+
+
+
+   <!-- 관리자 :: 대시보드 - 졸업대상자 수 -->
+   <select id="graduateToBeCount" resultType="int">
+<![CDATA[
+   SELECT COUNT(*) FROM(
+
+SELECT ROWNUM RNUM, U.USER_NO
+    , U.USER_NAME
+    , A.SUBTOTAL
+    , A.MISTOTAL
+    , (SUBTOTAL+MISTOTAL) AS TOTAL
+  FROM(
+SELECT USER_NO
+    , SUM(SUBTOTAL) AS SUBTOTAL
+    , SUM(MISTOTAL) AS MISTOTAL
+  FROM(
+SELECT USER_NO
+    , 0 AS SUBTOTAL
+    , COUNT(MIS_ATT_NO)*3 AS MISTOTAL
+  FROM TBL_MIS_ATT
+GROUP BY USER_NO
+UNION
+SELECT USER_NO
+    , SUM(AC_SCORE) AS SUBTOTAL
+    , 0 AS MISTOTAL  
+FROM TBL_APPLY
+WHERE APPLY_STATE = '승인'
+GROUP BY USER_NO
+UNION
+SELECT USER_NO, 0 AS SUBTOTAL, 0 AS MISTOTAL 
+  FROM TBL_USER WHERE AUTHORITY != 1 GROUP BY USER_NO
+)
+GROUP BY USER_NO
+ORDER BY USER_NO ASC ) A
+      , TBL_USER U
+WHERE A.USER_NO = U.USER_NO
+AND (SUBTOTAL+MISTOTAL) >= 1200 AND GRADE = 4 AND STATE = '재학')
+]]>
+   </select>
+
+   <!-- 관리자 :: 대시보드 - 최근 3개 MIS 정보 -->
+   <select id="misInfo" resultType="com.hmis.dto.MisInfoDTO">
+<![CDATA[
+SELECT * FROM
+(
+SELECT M.MIS_NO, M.TIMES, M.TITLE, COUNT(A.MIS_NO) AS CNT 
+  FROM TBL_MIS M, TBL_MIS_ATT A
+ WHERE M.MIS_NO = A.MIS_NO
+GROUP BY M.MIS_NO, M.TIMES, M.TITLE
+ORDER BY TIMES DESC
+)
+WHERE ROWNUM <= 3
+]]>
+   </select>
+
+   <select id="mainApplyWaitList"
+      resultType="com.hmis.domain.ApplyVO">
+<![CDATA[
+SELECT A.APPLY_NO
+    , S.SUB_NAME
+    , A.APPLY_DATE
+    , A.APPLY_STATE 
+  FROM TBL_APPLY A, TBL_SUBJECT S
+ WHERE S.SUB_NO = A.SUB_NO
+   AND ROWNUM <= 3
+   AND A.USER_NO = #{applyNo}
+ORDER BY A.APPLY_NO DESC
+]]>
+   </select>
+
+
+   <select id="checkUserNo" resultType="int">
+      SELECT COUNT(*)
+      FROM TBL_USER
+      WHERE user_no = #{userNo}
+   </select>
+
+</mapper>

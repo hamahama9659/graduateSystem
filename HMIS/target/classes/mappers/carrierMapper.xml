@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hmis.mapper.CarrierMapper">
+
+
+   <!-- 1. 검색 -->
+   <!-- 인증항목 분류/영역/항목명/발행처로 키워드검색가능 -->
+   <sql id="search">
+      <if test="searchType != null">
+
+         <!-- <if test="searchType == 'sn'.toString()">and sub_Name like '%' || 
+            #{keyword} || '%' </if> -->
+         <if test="searchType == 'cn'.toString()">and UPPER(SUB_NAME) LIKE UPPER('%'||REPLACE(''||
+            #{keyword}|| '', ' ', '')||'%') </if>
+
+      </if>
+   </sql>
+
+   <!-- 키워드로 검색된 리스트 목록 불러오기 -->
+   <select id="listSearch" resultType="com.hmis.domain.SubjectVO">
+      <![CDATA[  
+      SELECT
+      *
+      FROM(
+         SELECT rownum rnum, car_No,  car_Name
+         FROM (
+            SELECT 
+            sub_No,  sub_Name 
+            FROM 
+            TBL_CARRIER
+            WHERE car_No > 0 
+      ]]>
+
+      <!-- search에 대한 SQL문을 삽입 -->
+      <include refid="search" />
+      ORDER BY car_No DESC
+         
+      <![CDATA[    
+            )) WHERE (rnum >= #{pageStart} AND rnum <= #{pageEnd}) 
+         ORDER BY categ DESC
+      ]]>
+   </select>
+
+   <!--2. 페이징처리를 위한 검색된 리스트 목록의 ROW의 수 계산 -->
+   <select id="listSearchCount" resultType="int">
+      <![CDATA[  
+        SELECT
+        count(car_No) 
+        FROM
+        TBL_CARRIER 
+        WHERE
+        car_No > 0 
+      ]]>
+      <include refid="search" />
+   </select>
+
+
+   <!--1. 관리자: 진로 생성 -->
+   <insert id="adcreate">
+      INSERT INTO TBL_CARRIER
+      (CAR_NO, CAR_NAME)
+      VALUES
+      (SEQ_CARRIER.NEXTVAL, #{carName})
+   </insert>
+
+
+   <!-- 1. 관리자 :: 진로 삭제 -->
+   <delete id="addelete">
+      DELETE FROM
+      TBL_CARRIER
+      WHERE
+      CAR_NO = #{carNo}
+   </delete>
+
+
+
+   <!-- 2. 관리자 :: 진로 수정 -->
+   <!-- <update id="adupdate"> UPDATE TBL_CARRIER SET CAR_NAME = #{carName} 
+      WHERE CAR_NO = #{carNo} </update> -->
+
+
+   <!-- 3. 관리자 :: 진로 목록 -->
+   <select id="listAll" resultType="com.hmis.domain.CarrierVO">
+      <!-- CDATA는 닫는 꺽새 기호를 sql문이라고 인지하기 위해 --> 
+   <![CDATA[
+   select 
+       ROWNUM NUM, CAR_NO, CAR_NAME
+      FROM TBL_CARRIER
+      WHERE CAR_NO >= 0
+        ORDER BY CAR_NO DESC
+   ]]>
+   </select>
+
+   <select id="checkCarName" resultType="int">
+      SELECT COUNT(*)
+      FROM
+      TBL_CARRIER
+      WHERE car_Name = #{carName}
+   </select>
+
+
+
+</mapper>

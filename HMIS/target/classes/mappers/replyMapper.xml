@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="com.hmis.mapper.ReplyMapper">
+
+	<select id="list" resultType="com.hmis.domain.ReplyVO">
+
+		SELECT
+		R.REPLY_NO, R.QNA_NO, U.USER_NAME, R.REPLY_TEXT, R.REG_DATE
+		FROM
+		TBL_REPLY R, TBL_QNA Q, TBL_USER U
+		WHERE U.USER_NO = R.USER_NO
+		AND Q.QNA_NO=R.QNA_NO
+		AND R.QNA_NO = #{qnaNo}
+
+		ORDER BY R.REPLY_NO DESC
+
+	</select>
+
+
+	<insert id="create">
+
+		INSERT INTO TBL_REPLY(REPLY_NO, QNA_NO, REPLY_TEXT,
+		USER_NO, REG_DATE)
+		VALUES
+		(SEQ_REPLY.NEXTVAL,#{qnaNo}, #{replyText}, #{userNo}, SYSDATE)
+
+
+	</insert>
+
+
+	<!-- <update id="update"> UPDATE TBL_REPLY SET REPLY_TEXT = #{replyText} 
+		WHERE REPLY_NO = #{replyNo} </update> -->
+
+	<delete id="delete">
+		DELETE FROM TBL_REPLY
+		WHERE REPLY_NO = #{replyNo}
+	</delete>
+
+	<delete id="deleteAll">
+		DELETE FROM TBL_REPLY
+		WHERE QNA_NO = #{qnaNo}
+	</delete>
+
+
+	<!-- <resultMap id="ReplyVO" type="com.hmis.domain.ReplyVO"> <id property="replyNo" 
+		column="reply_no" /> <result property="qnaNo" column="qna_no" /> <result 
+		property="replyText" column="reply_text" /> <result property="replyWriter" 
+		column="reply_writer" /> <result property="regDate" column="regdate" /> <result 
+		property="updateDate" column="updatedate" /> </resultMap> <resultMap id="QnAResultMap" 
+		type="com.hmis.domain.QnAVO"> <id property="qnaNo" column="qna_no" /> <result 
+		property="qnaTitle" column="qna_title" /> <result property="qnaContents" 
+		column="qna_contents" /> <result property="userNo" column="user_no" /> <result 
+		property="regDate" column="regdate" /> <result property="hits" column="hits" 
+		/> </resultMap> -->
+
+</mapper>
+ 
