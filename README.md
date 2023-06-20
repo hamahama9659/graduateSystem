@@ -33,6 +33,7 @@
  (1) SQL
 
 -> 각종 자격증, MIS-DAY 참여점수 **환산 및 통계 Query** :
+
 ![image](https://github.com/hamahama9659/graduateSystem/assets/116577341/e87ee619-01d4-479c-89a5-e005a17c3836)
 
 -> 통계 쿼리 : HMIS/target/classes/mappers/statisticsMapper.xml
